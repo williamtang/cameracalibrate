@@ -9,6 +9,7 @@
  ***************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -26,6 +27,7 @@ class Config;
 
 // parse config data from file
 void parse_cfg(const string &cfg_path, Mat &cameraMatrix, Mat &distCoeffs);
+double str2double(const string str);
 
 int main(int argc, char* argv[])
 {
@@ -43,13 +45,19 @@ int main(int argc, char* argv[])
 		input_path = string(argv[2]);
 	}
 
-	
-
 	// initilize camera matrix and distort coefficient
-	Mat camera_matrix = Mat::eye(3, 3, CV_64F);
-	Mat dist_coeffs   = Mat::zeros(8, 1, CV_64F);
+	Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+	Mat distCoeffs   = Mat::zeros(4, 1, CV_64F);
 
+	parse_cfg(cfg_path, cameraMatrix, distCoeffs);
 
+	// undistort
+	Mat src = imread(input_path);
+	Mat dst;
+	undistort(src, dst, camera_matrix, dist_coeffs);
+	imshow( "src", src );
+	imshow( "dst", dst);
+	waitKey(0);
 
 	return 0;
 }
@@ -100,5 +108,19 @@ void parse_cfg(const string &cfg_path, Mat &cameraMatrix, Mat &distCoeffs)
 	}
 
 	// convert vector to mat
-	// TODO
+	for (int i = 0; i < 3; i++) {
+		// row
+		for (int j = 0; j < camera_matrix[i].size(); j++) {
+			cameraMatrix.at<double>(i,j) = str2double(camera_matrix[i][j]);
+		}
+	}
+
+	for (int i = 0; i < dist_coeffs.size(); i++) {
+		distCoeffs.at<double>(i,0) = str2double(dist_coeffs[i]);
+	}
+}
+
+double str2double(const string str)
+{
+	return atof(str.c_str());
 }
