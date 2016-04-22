@@ -18,6 +18,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "rapidjson\filereadstream.h"
 
 using namespace std;
 using namespace cv;
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 	} else if (argc == 2) {
 		cfg_path   = "config.json";
 		input_path = string(argv[1]);
-	} else (argc == 3) {
+	} else if (argc == 3) {
 		cfg_path   = string(argv[1]);
 		input_path = string(argv[2]);
 	}
@@ -54,7 +55,7 @@ int main(int argc, char* argv[])
 	// undistort
 	Mat src = imread(input_path);
 	Mat dst;
-	undistort(src, dst, camera_matrix, dist_coeffs);
+	undistort(src, dst, cameraMatrix, distCoeffs );
 	imshow( "src", src );
 	imshow( "dst", dst);
 	waitKey(0);
@@ -64,8 +65,11 @@ int main(int argc, char* argv[])
 
 void parse_cfg(const string &cfg_path, Mat &cameraMatrix, Mat &distCoeffs)
 {
+	FILE *fp = fopen( cfg_path.c_str(), "rb" );
+	char readBuf[65536];
+	FileReadStream is( fp, readBuf, sizeof( readBuf ) );
 	rapidjson::Document doc;
-	doc.Parse(cfg_path);
+	doc.ParseStream( is );
 	vector<string> camera_matrix[3];
 	vector<string> dist_coeffs;
 
@@ -74,15 +78,15 @@ void parse_cfg(const string &cfg_path, Mat &cameraMatrix, Mat &distCoeffs)
 		const Value &cmjson = doc["cameraMatrix"];
 		for (SizeType i = 0; i < cmjson.Size(); ++i) {
 			if (cmjson[i].HasMember("1")) {
-				str[0].push_back(cmjson[i]["1"].GetString());
+				camera_matrix[0].push_back(cmjson[i]["1"].GetString());
 				cout << "a1" << i << ": " << cmjson[i]["1"].GetString() << endl;
 			}
 			if (cmjson[i].HasMember("2")) {
-				str[1].push_back(cmjson[i]["2"].GetString());
+				camera_matrix[1].push_back(cmjson[i]["2"].GetString());
 				cout << "a2" << i <<": " << cmjson[i]["2"].GetString() << endl;
 			}
 			if (cmjson[i].HasMember("3")) {
-				str[2].push_back(cmjson[i]["3"].GetString());
+				camera_matrix[2].push_back(cmjson[i]["3"].GetString());
 				cout << "a3" << i <<": " << cmjson[i]["3"].GetString() << endl;
 			}
 		}
@@ -106,6 +110,8 @@ void parse_cfg(const string &cfg_path, Mat &cameraMatrix, Mat &distCoeffs)
 			}
 		}
 	}
+
+	fclose( fp );
 
 	// convert vector to mat
 	for (int i = 0; i < 3; i++) {
